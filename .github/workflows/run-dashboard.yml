@@ -1,0 +1,43 @@
+# run-dashboard.yml
+
+name: Generate Regression Dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      num_commits:
+        description: 'Number of commits to analyze'
+        required: false
+        default: '10'
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  generate-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history to access all commits
+
+    - name: Setup TARDIS environment
+      uses: ./.github/actions/setup_env  # Assumes this action exists in your repo
+
+    - name: Run dashboard notebook
+      env:
+        NUM_COMMITS: ${{ github.event.inputs.num_commits }}
+      run: |
+        jupyter nbconvert --to notebook --execute create_regression_dashboard.ipynb --output executed_dashboard.ipynb
+        jupyter nbconvert --to html executed_dashboard.ipynb --output regression_dashboard_report.html
+
+    - name: Upload dashboard artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: regression-dashboard-results
+        path: |
+          dashboard_output/regression_dashboard.html
+          executed_dashboard.ipynb
+          regression_dashboard_report.html
